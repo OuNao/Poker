@@ -49,6 +49,7 @@ public class GameView extends View {
 	private int cardW, cardH;
 	private int buttonW, buttonH;
 	private int compCardsX, compCardsY;
+    private int comp2CardsX, comp2CardsY;
 	private int playerCardsX, playerCardsY;
 	private int communityX, communityY;
 	private float loadingProgress;
@@ -114,9 +115,11 @@ public class GameView extends View {
 
 		// set things like cards and chip labels relative to table
 		table.set(0, cardH, screenW, cardH + screenH / 2);
-		compCardsX = (int) table.right - cardW - 50;
+		compCardsX = (int) table.left + 50;
 		compCardsY = (int) table.top - cardH / 2;
-		playerCardsX = (int) table.left + 50;
+        comp2CardsX = (int) table.right - cardW - 50;
+        comp2CardsY = (int) table.top - cardH / 2;
+        playerCardsX = (int) table.left + 50;
 		playerCardsY = (int) table.bottom - cardH / 2;
 		communityX = (int) (table.right + table.left) / 5 - cardW + PADDING / 2;
 		communityY = (int) (table.top + table.bottom) / 2 - cardH / 2;
@@ -162,6 +165,7 @@ public class GameView extends View {
 		int i = 0;
 		List<Card> cards = new ArrayList<Card>(game.getDeck());
 		cards.addAll(game.getBot().getCards());
+        cards.addAll(game.getBot2().getCards());
 		cards.addAll(game.getUser().getCards());
 		cards.addAll(game.getCommunityCards());
 		for (Card c : cards) {
@@ -214,9 +218,17 @@ public class GameView extends View {
 				// show the user the bot's cards at the end of the hand.
 				if (game.isHandOver())
 					cardResId = game.getBot().getCards().get(i).getResId();
-				drawBitmap(canvas, cardResId, compCardsX - i
+				drawBitmap(canvas, cardResId, compCardsX + i
 						* (cardW + PADDING), compCardsY);
 			}
+            for (int i = 0; i < game.getBot2().getCards().size(); i++) {
+                int cardResId = R.drawable.card_back;
+                // show the user the bot's cards at the end of the hand.
+                if (game.isHandOver())
+                    cardResId = game.getBot2().getCards().get(i).getResId();
+                drawBitmap(canvas, cardResId, comp2CardsX - i
+                        * (cardW + PADDING), comp2CardsY);
+            }
 			for (int i = 0; i < game.getUser().getCards().size(); i++) {
 				drawBitmap(canvas, game.getUser().getCards().get(i).getResId(),
 						playerCardsX + i * (cardW + PADDING), playerCardsY);
@@ -227,19 +239,24 @@ public class GameView extends View {
 			}
 
 			// draw chip counts
-			canvas.drawText(game.getUser().getChips() + "", playerCardsX
+			canvas.drawText(game.getUser().getChips() + " curBet=" + Integer.toString(game.getUser().getCurBet()), playerCardsX
 					+ cardW + PADDING / 2,
 					playerCardsY + cardH + whitePaint.getFontSpacing(),
 					whitePaint);
-			canvas.drawText(game.getBot().getChips() + "", compCardsX - PADDING
-					/ 2, compCardsY + cardH + whitePaint.getFontSpacing(),
+			canvas.drawText(game.getBot().getChips() + " curBet=" + Integer.toString(game.getBot().getCurBet()), compCardsX
+                    + cardW + PADDING / 2,
+                    compCardsY + cardH + whitePaint.getFontSpacing(),
 					whitePaint);
+            canvas.drawText(game.getBot2().getChips() + " curBet=" + Integer.toString(game.getBot2().getCurBet()), comp2CardsX
+                    - PADDING / 2,
+                    comp2CardsY + cardH + whitePaint.getFontSpacing(),
+                    whitePaint);
 			canvas.drawText(game.getPot() + "", (table.left + table.right) / 2,
 					communityY + cardH + whitePaint.getFontSpacing(),
 					whitePaint);
 
 			// hide buttons when not your turn
-			if (game.isMyTurn() && !game.isHandOver()) {
+			if (((game.getTurn() == 0) && !game.isHandOver()) && !game.getUser().IsFolded()) {
 				drawBitmap(canvas, foldButton.getStateResId(),
 						foldButton.getX(), foldButton.getY());
 				if (game.getCurBet() == 0) {
@@ -308,7 +325,9 @@ public class GameView extends View {
 			// press anywhere after a hand to start a new one
 			if (game.isHandOver()) {
 				game.setupHand();
-			} else if (foldButton.isPressed()) {
+			} else if (game.getUser().IsFolded()){
+                game.setNextTurn();
+            } else if (foldButton.isPressed()) {
 				game.getUser().fold();
 				endMyTurn();
 			} else if (checkButton.isPressed()) {
@@ -339,8 +358,7 @@ public class GameView extends View {
 	}
 
 	private void endMyTurn() {
-		game.setMyTurn(false);
-		game.makeNextMove();
+		game.setNextTurn();
 		slider.setCurX(slider.getStartX());
 	}
 

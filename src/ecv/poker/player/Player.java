@@ -15,6 +15,8 @@ public class Player {
 	private List<Card> cards;
 	private Game game;
 	private String name;
+    private int curBet = 0;
+    private boolean Folded = false;
 
 	public Player(Game game, String name, int startingChips) {
 		this.game = game;
@@ -42,6 +44,14 @@ public class Player {
 		return game;
 	}
 
+    public void resetBet() {curBet = 0;}
+
+    public int getCurBet() {return curBet;}
+
+    public boolean IsFolded() {return Folded;}
+
+    public void resetFolded() {Folded = false;}
+
 	/**
 	 * @param i
 	 *            number of chips to be added or deducted from player
@@ -59,8 +69,9 @@ public class Player {
 	 */
 	public void fold() {
 		cards.clear();
+        Folded = true;
 		game.setAction(Game.Action.FOLD);
-		game.setCurBet(0);
+		//game.setCurBet(0);
 		String format = game.getView().getContext().getString(R.string.folded);
 		game.getView().toast(String.format(format, name));
 	}
@@ -70,7 +81,7 @@ public class Player {
 	 */
 	public void check() {
 		game.setAction(Game.Action.CHECK);
-		game.setCurBet(0);
+		//game.setCurBet(0);
 		String format = game.getView().getContext().getString(R.string.checked);
 		game.getView().toast(String.format(format, name));
 	}
@@ -78,16 +89,16 @@ public class Player {
 	/**
 	 * Call the current bet and deduct from chip stack
 	 * 
-	 * @param bet
 	 */
 	public void call() {
 		game.getView().playSound(game.getView().chipSound);
-		chips -= game.getCurBet();
-		game.addToPot(game.getCurBet());
+		chips -= (game.getCurBet() - curBet);
+		game.addToPot(game.getCurBet() - curBet);
+        curBet = game.getCurBet();
 		game.setAction(Game.Action.CALL);
 		String format = game.getView().getContext().getString(R.string.called);
 		game.getView().toast(String.format(format, name, game.getCurBet()));
-		game.setCurBet(0);
+		//game.setCurBet(0);
 		
 	}
 
@@ -102,6 +113,7 @@ public class Player {
 		game.addToPot(bet);
 		game.setAction(Game.Action.BET);
 		game.setCurBet(bet);
+        curBet = game.getCurBet();;
 		String format = game.getView().getContext().getString(R.string.bet);
 		game.getView().toast(String.format(format, name, bet));
 	}
@@ -113,12 +125,11 @@ public class Player {
 	 */
 	public void raise(int raise) {
 		game.getView().playSound(game.getView().chipSound);
-		chips -= game.getCurBet();
-		game.addToPot(game.getCurBet());
-		chips -= raise;
-		game.addToPot(raise);
+		chips -= ((game.getCurBet() + raise) - curBet);
+		game.addToPot((game.getCurBet() + raise) - curBet);
 		game.setAction(Game.Action.RAISE);
-		game.setCurBet(raise);
+		game.setCurBet(raise + game.getCurBet());
+        curBet = game.getCurBet();
 		String format = game.getView().getContext().getString(R.string.raised);
 		game.getView().toast(String.format(format, name, raise));
 	}

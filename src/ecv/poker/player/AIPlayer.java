@@ -6,6 +6,8 @@ import java.util.List;
 
 import android.os.Handler;
 import android.util.Log;
+
+import ecv.poker.activity.SettingsActivity;
 import ecv.poker.card.Card;
 import ecv.poker.card.Evaluator;
 import ecv.poker.game.Game;
@@ -98,21 +100,27 @@ public class AIPlayer extends Player {
 					fold();
 			}
 		}
-		getGame().setMyTurn(true);
-		getGame().makeNextMove();
-	}
+        getGame().setNextTurn();
+    }
 
 	/**
 	 * Run simulations do calculate the expected odds of winning the hand The
 	 * ExpectedValue is a float between 0 and 1, with 1 being a guaranteed win.
 	 */
 	public void calculateExpectedValue() {
-		Log.d("POKER", "calculating EV");
-		aiThread = new AIThread();
+		Log.d("POKER", "calculating EV ");
+        int bot = 1;
+		if (this.getName().equals("Computer")) bot = 1;
+        if (this.getName().equals("Computer2")) bot = 2;
+        aiThread = new AIThread(bot);
 		aiThread.start();
 	}
 
 	private class AIThread extends Thread {
+        private int bot;
+        public AIThread (int bot) {
+           this.bot = bot;
+        }
 
 		@Override
 		public void run() {
@@ -122,6 +130,15 @@ public class AIPlayer extends Player {
 					.getCommunityCards());
 			List<Card> opponentCards = new ArrayList<Card>(getGame().getUser()
 					.getCards());
+            List<Card> opponentBotCards = null;
+            if (this.bot == 1) {
+                opponentBotCards = new ArrayList<Card>(getGame().getBot2()
+                        .getCards());
+            }
+            if (this.bot == 2) {
+                opponentBotCards = new ArrayList<Card>(getGame().getBot()
+                        .getCards());
+            }
 			int communityCardsDealt = community.size();
 
 			int wins = 0;
@@ -130,15 +147,20 @@ public class AIPlayer extends Player {
 				Collections.shuffle(deck);
 				while (opponentCards.size() < 2)
 					opponentCards.add(deck.remove(deck.size() - 1));
+                while (opponentBotCards.size() < 2)
+                    opponentBotCards.add(deck.remove(deck.size() - 1));
 				while (community.size() < 5)
 					community.add(deck.remove(deck.size() - 1));
 
-				if (Evaluator.evaluate(getCards(), community) >= Evaluator
-						.evaluate(opponentCards, community))
+				if ((Evaluator.evaluate(getCards(), community) >= Evaluator
+						.evaluate(opponentCards, community)) && (Evaluator.evaluate(getCards(), community) >= Evaluator
+                        .evaluate(opponentBotCards, community)))
 					wins++;
 
 				deck.addAll(opponentCards);
+                deck.addAll(opponentBotCards);
 				opponentCards.clear();
+                opponentBotCards.clear();
 				while (community.size() > communityCardsDealt)
 					deck.add(community.remove(community.size() - 1));
 			}
